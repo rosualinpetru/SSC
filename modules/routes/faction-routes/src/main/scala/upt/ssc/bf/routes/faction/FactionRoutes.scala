@@ -8,11 +8,10 @@ import org.http4s.websocket.WebSocketFrame.Close
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import upt.ssc.bf.algebra.faction.{FactionAlgebra, MercenaryCommunicator}
 import upt.ssc.bf.core.config.EntryCode
-import upt.ssc.bf.core.config.faction.ContractConfig
-import upt.ssc.bf.routes.faction.ws.WSMessaging
+import upt.ssc.bf.routes.faction.ws.WSMessenger
 
 final class FactionRoutes[F[_]: Async](entryCode: EntryCode)(
-    wsHandler: WSMessaging[F]
+    wsMessenger: WSMessenger[F]
 ) extends Http4sDsl[F] {
 
   private val logger = Slf4jLogger.getLogger[F]
@@ -30,8 +29,16 @@ final class FactionRoutes[F[_]: Async](entryCode: EntryCode)(
         } yield response
       else {
         object WSHandler {
-          val onClose: F[Unit] =
-            logger.info(s"Mercenary $mercenaryId left the faction!")
+          val onClose: F[Unit] = for {
+            _ <- logger.info(s"Mercenary $mercenaryId left the faction!")
+            lastBatch <- wsMessenger.mercenaryCommunicator.getLastBatch(
+              mercenaryId
+            )
+            _ <- lastBatch match {
+              case Some(value) => wsMessenger.contractsQueue.offer(value)
+              case None        => Async[F].unit
+            }
+          } yield ()
 
           val onNonWSRequest: F[Response[F]] = for {
             _ <- logger.debug(
@@ -50,7 +57,9 @@ final class FactionRoutes[F[_]: Async](entryCode: EntryCode)(
 
         for {
           _ <- logger.info(s"Mercenary $mercenaryId joined the faction!")
-          mercenaryQueue <- wsHandler.mercenaryCommunicator.enroll(mercenaryId)
+          mercenaryQueue <- wsMessenger.mercenaryCommunicator.enroll(
+            mercenaryId
+          )
 
           response <- wsb
             .withHeaders(Headers.empty)
@@ -59,8 +68,8 @@ final class FactionRoutes[F[_]: Async](entryCode: EntryCode)(
             .withOnHandshakeFailure(WSHandler.onHandshakeFailure)
             .withFilterPingPongs(false)
             .build(
-              send = wsHandler.toMercenary(mercenaryQueue),
-              receive = wsHandler.fromMercenary(mercenaryId)
+              send = wsMessenger.toMercenary(mercenaryQueue),
+              receive = wsMessenger.fromMercenary(mercenaryId)
             )
         } yield response
       }
@@ -69,19 +78,17 @@ final class FactionRoutes[F[_]: Async](entryCode: EntryCode)(
 
 object FactionRoutes {
 
-  def apply[F[_]: Async: Random](
-      contractConfig: ContractConfig,
+  def apply[F[_]: Async](
+      factionAlgebra: FactionAlgebra[F],
+      mercenaryCommunicator: MercenaryCommunicator[F],
       entryCode: EntryCode
   )(serverSignal: SignallingRef[F, Boolean]): Resource[F, FactionRoutes[F]] =
     for {
-      factionAlgebra <- FactionAlgebra[F](contractConfig)
-      mercenaryCommunicator <- MercenaryCommunicator[F]
-
       contractsQueue <- factionAlgebra.contractsQueue
 
       exitTopic <- Topic[F, Close].toResource
 
-      wsHandler <- WSMessaging[F](
+      wsHandler <- WSMessenger[F](
         mercenaryCommunicator,
         contractsQueue,
         exitTopic,

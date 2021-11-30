@@ -1,9 +1,13 @@
 package ssc.upt.bf.app.faction
 
+import doobie.hikari.HikariTransactor
+import doobie.util.ExecutionContexts
+import doobie.util.transactor.Transactor
 import fs2.concurrent.SignallingRef
 import org.http4s.blaze.server._
 import org.http4s.server._
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import upt.ssc.bf.algebra.faction.{FactionAlgebra, MercenaryCommunicator}
 import upt.ssc.bf.core.config.faction.FactionConfig
 import upt.ssc.bf.routes.faction.FactionRoutes
 
@@ -39,8 +43,21 @@ final case class Founder[F[_]: Async] private (factionConfig: FactionConfig)(
 
     _ <- logger.info(s"Config: $factionConfig")
 
+    ce <- ExecutionContexts.fixedThreadPool[F](factionConfig.dbConfig.poolSize)
+    implicit0(xa: Transactor[F]) <- HikariTransactor.newHikariTransactor[F](
+      factionConfig.dbConfig.driver,
+      factionConfig.dbConfig.jdbcUrl,
+      factionConfig.dbConfig.username,
+      factionConfig.dbConfig.password,
+      ce
+    )
+
+    factionAlgebra <- FactionAlgebra[F](factionConfig.contractConfig)
+    mercenaryCommunicator <- MercenaryCommunicator[F]
+
     factionRoutes <- FactionRoutes(
-      factionConfig.contractConfig,
+      factionAlgebra,
+      mercenaryCommunicator,
       factionConfig.entryCode
     )(signal)
 

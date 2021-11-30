@@ -5,6 +5,7 @@ import upt.ssc.bf.core.config.EntryCode
 case class FactionConfig(
     serverConfig: ServerConfig,
     contractConfig: ContractConfig,
+    dbConfig: DbConfig,
     entryCode: EntryCode
 )
 
@@ -14,6 +15,7 @@ object FactionConfig {
     sc <- ServerConfig.load
     cc <- ContractConfig.load
     ec <- EntryCode.load
-  } yield FactionConfig(sc, cc, ec)
+    dc <- DbConfig.load
+  } yield FactionConfig(sc, cc, dc, ec)
 
 }

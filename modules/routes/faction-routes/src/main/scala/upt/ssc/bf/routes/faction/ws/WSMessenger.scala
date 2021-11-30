@@ -2,14 +2,14 @@ package upt.ssc.bf.routes.faction.ws
 
 import fs2.concurrent.{SignallingRef, Topic}
 import io.circe.syntax.EncoderOps
-import fs2.{Chunk, Pipe, Stream}
+import fs2.{Pipe, Stream}
 import io.circe.Decoder
 import io.circe.parser.parse
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.websocket.WebSocketFrame.{Close, Text}
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import upt.ssc.bf.algebra.faction.MercenaryCommunicator
-import upt.ssc.bf.core.model.Contract
+import upt.ssc.bf.core.model._
 import upt.ssc.bf.core.model.ws.{
   Available,
   ContractsWS,
@@ -19,12 +19,11 @@ import upt.ssc.bf.core.model.ws.{
 
 import java.nio.file.{Path => NioPath}
 import scala.concurrent.duration._
-
 import java.util.UUID
 
-private[faction] case class WSMessaging[F[_]: Async] private (
+private[faction] case class WSMessenger[F[_]: Async] private (
     mercenaryCommunicator: MercenaryCommunicator[F],
-    contractsQueue: Queue[F, Chunk[Contract]],
+    contractsQueue: Queue[F, Batch],
     exitTopic: Topic[F, Close],
     serverSignal: SignallingRef[F, Boolean]
 ) {
@@ -32,7 +31,7 @@ private[faction] case class WSMessaging[F[_]: Async] private (
   private val logger = Slf4jLogger.getLogger[F]
 
   def toMercenary(
-      mercenaryQueue: Queue[F, Chunk[Contract]]
+      mercenaryQueue: Queue[F, Batch]
   ): Stream[F, WebSocketFrame] = {
     val contractStream = for {
       batch <- Stream.fromQueueUnterminated(mercenaryQueue)
@@ -57,7 +56,6 @@ private[faction] case class WSMessaging[F[_]: Async] private (
                 _ <- logger.warn(
                   s"THE EMPEROR WAS KILLED BY $mercenaryId: $password!"
                 )
-
                 _ <- Stream
                   .emit(password)
                   .through(fs2.text.utf8.encode)
@@ -76,18 +74,23 @@ private[faction] case class WSMessaging[F[_]: Async] private (
                       "Could not write password in the according text file. Probably the server does not run in the expected environment!"
                     )
                   )
-
                 _ <- exitTopic.publish1(Close())
-                _ <- logger.warn("Closing server!")
-                _ <- serverSignal.set(true).delayBy(5.seconds).start
+                duration = 1.minute
+                _ <- logger.warn(s"Closing server in $duration!")
+                _ <- serverSignal.set(true).delayBy(duration).start
               } yield ()
             case FinishedJob(None) =>
-              logger.debug(s"Mercenary $mercenaryId killed only peasants!")
+              for {
+                _ <- logger.debug(
+                  s"Mercenary $mercenaryId came back from mission!"
+                )
+                _ <- mercenaryCommunicator.completeLastMission(mercenaryId)
+              } yield ()
             case Available =>
               for {
                 _ <- logger.info(s"Assign contracts to $mercenaryId!")
                 batch <- contractsQueue.take
-                _ <- mercenaryCommunicator.assignContracts(mercenaryId, batch)
+                _ <- mercenaryCommunicator.assignMission(mercenaryId, batch)
               } yield ()
             case _ => logger.error("Received an inconsistent text frame!")
           }
@@ -103,13 +106,13 @@ private[faction] case class WSMessaging[F[_]: Async] private (
     }
 }
 
-object WSMessaging {
+object WSMessenger {
   def apply[F[_]: Async](
       mercenaryCommunicator: MercenaryCommunicator[F],
-      contractsQueue: Queue[F, Chunk[Contract]],
+      contractsQueue: Queue[F, Batch],
       exitTopic: Topic[F, Close],
       serverSignal: SignallingRef[F, Boolean]
-  ): Resource[F, WSMessaging[F]] = new WSMessaging[F](
+  ): Resource[F, WSMessenger[F]] = new WSMessenger[F](
     mercenaryCommunicator,
     contractsQueue,
     exitTopic,

@@ -1,66 +1,73 @@
 import sbt._
 
-private object ProjectRepo {
+trait Libraries {
   // https://mvnrepository.com/artifact/co.fs2/fs2-core
-  val fs2CoreDep = "co.fs2" %% "fs2-core" % "3.2.2" withSources ()
+  protected val fs2CoreDep = "co.fs2" %% "fs2-core" % "3.2.2" withSources ()
 
   // https://mvnrepository.com/artifact/co.fs2/fs2-io
-  val fs2IODep = "co.fs2" %% "fs2-io" % "3.2.2" withSources ()
+  protected val fs2IODep = "co.fs2" %% "fs2-io" % "3.2.2" withSources ()
 
   // https://mvnrepository.com/artifact/org.typelevel/cats-core
-  val catsDep = "org.typelevel" %% "cats-core" % "2.6.1" withSources ()
+  protected val catsDep = "org.typelevel" %% "cats-core" % "2.6.1" withSources ()
 
   // https://mvnrepository.com/artifact/org.typelevel/cats-effect
-  val catsEffectDep =
+  protected val catsEffectDep =
     "org.typelevel" %% "cats-effect" % "3.3-393-da7c7c7" withSources ()
 
   // https://mvnrepository.com/artifact/org.typelevel/log4cats-core
-  val log4catsCoreDep =
+  protected val log4catsCoreDep =
     "org.typelevel" %% "log4cats-core" % "2.1.1" withSources ()
 
   // https://mvnrepository.com/artifact/org.typelevel/log4cats-slf4j
-  val log4catsSlf4jDep =
+  protected val log4catsSlf4jDep =
     "org.typelevel" %% "log4cats-slf4j" % "2.1.1" withSources ()
 
   // https://mvnrepository.com/artifact/org.http4s/http4s-dsl
-  val http4sDSLDep = "org.http4s" %% "http4s-dsl" % "1.0.0-M29"
+  protected val http4sDSLDep = "org.http4s" %% "http4s-dsl" % "1.0.0-M29"
 
   // https://mvnrepository.com/artifact/org.http4s/http4s-jdk-http-client
-  val http4sJdkHttpClientDep =
+  protected val http4sJdkHttpClientDep =
     "org.http4s" %% "http4s-jdk-http-client" % "0.6.0-M6"
 
   // https://mvnrepository.com/artifact/org.http4s/http4s-blaze-server
-  val htt4psBlazeServerDep =
+  protected val htt4psBlazeServerDep =
     "org.http4s" %% "http4s-blaze-server" % "1.0.0-M29"
 
   // https://mvnrepository.com/artifact/org.http4s/http4s-circe
-  val http4sCirceDep = "org.http4s" %% "http4s-circe" % "1.0.0-M29"
+  protected val http4sCirceDep = "org.http4s" %% "http4s-circe" % "1.0.0-M29"
 
   // https://mvnrepository.com/artifact/io.circe/circe-core
-  val circeCoreDep = "io.circe" %% "circe-core" % "0.14.1" withSources ()
+  protected val circeCoreDep = "io.circe" %% "circe-core" % "0.14.1" withSources ()
 
   // https://mvnrepository.com/artifact/io.circe/circe-parser
-  val circeParserDep = "io.circe" %% "circe-parser" % "0.14.1" withSources ()
+  protected val circeParserDep = "io.circe" %% "circe-parser" % "0.14.1" withSources ()
 
   // https://mvnrepository.com/artifact/io.circe/circe-generic
-  val circeGenericDep =
+  protected val circeGenericDep =
     "io.circe" %% "circe-generic" % "0.14.1" withSources ()
 
   // https://github.com/vlovgr/ciris/releases
-  val cirisDep = "is.cir" %% "ciris" % "2.2.1"
+  protected val cirisDep = "is.cir" %% "ciris" % "2.2.1"
 
   // https://mvnrepository.com/artifact/commons-codec/commons-codec
-  val apacheCommonCodecDep =
+  protected val apacheCommonCodecDep =
     "commons-codec" % "commons-codec" % "1.15" withSources ()
 
   // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
-  val logbackDep = "ch.qos.logback" % "logback-classic" % "1.2.7" withSources ()
+  protected val logbackDep = "ch.qos.logback" % "logback-classic" % "1.2.7" withSources ()
+
+  // https://mvnrepository.com/artifact/org.tpolecat/doobie-core
+  protected val doobieCoreDep = "org.tpolecat" %% "doobie-core" % "1.0.0-RC1"
+
+  // https://mvnrepository.com/artifact/org.tpolecat/doobie-postgres
+  protected val doobiePostgresDep = "org.tpolecat" %% "doobie-postgres" % "1.0.0-RC1"
+
+  // https://mvnrepository.com/artifact/org.tpolecat/doobie-hikari
+  protected val doobieHikariDep = "org.tpolecat" %% "doobie-hikari" % "1.0.0-RC1"
 
 }
 
-object Libraries {
-
-  import ProjectRepo._
+object Libraries extends Libraries {
 
   val scalaMainVersion = "2.13.7"
 
@@ -96,5 +103,7 @@ object Libraries {
   lazy val ciris = Seq(cirisDep)
 
   lazy val crypt = Seq(apacheCommonCodecDep)
+
+  lazy val doobie = Seq(doobieCoreDep, doobiePostgresDep, doobieHikariDep)
 
 }

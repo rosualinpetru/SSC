@@ -46,7 +46,7 @@ final class WSMessaging[F[_]: Async] private (
             .liftTo[F]
 
           _ <- logger.debug(
-            s"Received batch of contracts! First is: ${contractsMessage.batch.headOption}"
+            s"Received batch of contracts! First is: ${contractsMessage.batch.head}"
           )
 
           t1 <- Clock[F].realTimeInstant
@@ -67,8 +67,10 @@ final class WSMessaging[F[_]: Async] private (
           _ <-
             if (emperorOpt.isDefined) logger.warn(s"EMPEROR: ${emperorOpt.get}")
             else Async[F].unit
-          _ <- logger.debug(s"Took ${t2.getEpochSecond - t1.getEpochSecond} seconds to finish ${contracts.size} contracts")
-            _ <- messageQueue.offer(finishedJob)
+          _ <- logger.debug(
+            s"Took ${t2.getEpochSecond - t1.getEpochSecond} seconds to finish ${contracts.size} contracts"
+          )
+          _ <- messageQueue.offer(finishedJob)
           _ <- messageQueue.offer(Available)
         } yield ()
 

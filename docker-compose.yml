@@ -1,0 +1,54 @@
+x-mercenary: &mercenary
+  image: mercenary-app:3.0.0
+  environment:
+    - BF_EMPEROR_SALT=$$6$$h0MJuLFx$$
+    - BF_EMPEROR_HASH=$$6$$h0MJuLFx$$gXykXZM79L/0GAjDJDGavFCx64vESljyyYqpkRSgaHtnq8nmv2rn9miJbIbdzMQPtbPsU00zSoZ9ohiLQ0Z2d0
+    - BF_FACTION_HOST=faction:31513
+  links:
+    - faction
+
+version: "3.9"
+services:
+  postgres:
+    image: postgres:14.1
+    command: postgres -N 1000
+    environment:
+      - POSTGRES_DB=brute_faction
+      - POSTGRES_USER=founder
+      - POSTGRES_PASSWORD=founder
+    ports:
+      - "5432:5432"
+    volumes:
+      - faction-db:/var/lib/postgresql/data
+  faction:
+    image: faction-app:3.0.0
+    environment:
+      - BF_DB_HOST=postgres
+      - BF_CONTRACT_LENGTH=4
+      - BF_CONTRACT_PREFIX=>>>sec21f<<<
+      - BF_CONTRACT_MAX_ALPHA=6
+      - BF_CONTRACT_MAX_NUM=4
+      - BF_CONTRACT_MAX_SYM=4
+      - BF_CONTRACT_CHUNKS_IN_QUEUE=10
+      - BF_CONTRACT_CAN_START_WITH_SYM=false
+      - BF_CONTRACT_CHUNK_SIZE=8192
+    links:
+      - postgres
+    ports:
+      - "31513:31513"
+    volumes:
+      - faction:/data
+  mercenary1: 
+    <<: *mercenary
+  mercenary2: 
+    <<: *mercenary
+  mercenary3: 
+    <<: *mercenary
+  mercenary4:
+    <<: *mercenary
+  mercenary5:
+    <<: *mercenary
+
+volumes:
+  faction:
+  faction-db:

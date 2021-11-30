@@ -13,11 +13,11 @@ lazy val commonSettings = {
   import Libraries._
   Seq(
     organizationName := "RAP",
-    version := "0.0.1",
+    version := "3.0.0",
     scalaVersion := Libraries.scalaMainVersion,
     scalacOptions ++= CompilerSettings.compilerFlags,
     discoveredMainClasses := Seq.empty,
-    libraryDependencies ++= cats ++ fs2 ++ ciris ++ circe ++ crypt ++ http4s ++ log4cats,
+    libraryDependencies ++= cats ++ fs2 ++ ciris ++ circe ++ crypt ++ http4s ++ log4cats ++ doobie,
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     addCompilerPlugin(
       ("org.typelevel" %% "kind-projector" % "0.13.2").cross(CrossVersion.full)
